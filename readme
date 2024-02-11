@@ -1,1 +1,8 @@
-This is the first file
+This is a dataset and analysis created by David White in Spring of 2023 for his Master's thesis. 
+
+The purpose of this project was to create a Shiny App where Water Quality Data was matched to Health Outcome Data in the state of Georgia.
+
+There are three main datasets. They can be found in the Data Repository in the "WQ and Chem - UGA Spring 2023" Directory. In that directory are the 3 data catalogue files. 
+- Potential Harmful Chemicals from WQP - this is a high level spreadsheet explaining what each row in "Water Quality Data Final" is - the Type the Data is, and the High / Medium / Low for risk to human health and the interest to Sci4Ga
+- Health Quality Outcome Data
+- Water Quality Data Final
