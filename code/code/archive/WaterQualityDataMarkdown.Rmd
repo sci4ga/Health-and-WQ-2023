@@ -1,0 +1,103 @@
+---
+title: "WaterQualityData"
+author: "David White"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+Step 1: Loading libraries
+```{r}
+library(tidyverse)
+library(readxl)
+library(naniar)
+library(lubridate)
+```
+
+Step 2:Loading data
+```{r}
+wqd <- read_excel("data/wqd.xlsx", col_types = c("text", 
+    "text", "text", "text", "text", "text", 
+    "text", "text", "numeric", "date", "numeric", 
+    "text", "numeric", "text", "numeric", 
+    "text", "text", "numeric", "text", "numeric", 
+    "numeric", "text", "numeric", "numeric", 
+    "numeric", "numeric", "text", "text", 
+    "text", "numeric", "numeric", "numeric", 
+    "numeric", "numeric", "numeric", "numeric", 
+    "numeric", "text", "text"), na = "NA")
+```
+
+
+Step 3: Viewing data and checking for duplicates
+```{r}
+glimpse(wqd)
+wqd<-as.data.frame(wqd)
+which(duplicated(wqd))
+```
+Initial comments: Thw data set is full of useless information. We don't need to know about fish. I need to identify important markers such as biochemical oxygen demand, E. coli levels, etc. There is duplicate, but it appears to only represent a small portion of the data set. As a workaround, a new column giving each data point a unique identifier will be created after cleaning the data.  
+
+
+Step 4: Cleaning Data
+```{r}
+wqdclean<- subset(wqd, select = c('Project Name', 'Sampling Intent', 'Submedia', 'Monitoring Location ID', 'Monitoring Location', 'Date', 'Parameter', 'Result (Value)', 'Units', 'Detection Limit', 'Detection Limit Unit'))
+wqdclean <- wqdclean%>%drop_na('Result (Value)')
+```
+Dropped 28 variables that were deemed unimportant for analysis and kept 11.
+It possibly would be a good idea to reshape data based on variable 'Parameter'. A new column called TABLEID will be created to make reshaping the data easier.
+
+
+Step 5: Reshaping Data and adding unique identifier
+```{r}
+wqdclean<-wqdclean%>%mutate(TABLEID=row_number())
+wqdwide <- wqdclean %>% pivot_wider(names_from='Parameter', values_from ='Result (Value)', id_cols=c('TABLEID', 'Monitoring Location ID', 'Date'))
+```
+This worked a little too well. Now there are 64 variables. I did lower the number of observations to 4862 though (from 12570 initially). I'll need to repeat step 4 and remove useless variables.
+
+
+Step 6: Cleaning Data Again
+```{r}
+wqdfinal <- wqdwide%>% subset(select=c('TABLEID', 'Monitoring Location ID', 'Date', 'Dissolved oxygen (DO)', 'Dissolved oxygen saturation', 'Biochemical oxygen demand, standard conditions', 'Phosphorus', 'Total suspended solids', 'Ammonia-nitrogen', 'Sulfate', 'Inorganic nitrogen (nitrate and nitrite)', 'Escherichia coli', 'Enterococcus')) 
+```
+This data set is much better to read and use. A lot of the data points are missing (values of NA/NULL). This is likely due to that data not being collected at the time. Now the data can be filtered.
+
+
+Step 7: Filtering Data
+```{r}
+Ecolidata<-wqdfinal%>%drop_na('Escherichia coli')
+
+
+glimpse(Ecolidata)
+```
+Finally I shrunk the dataset to 220 observations of E.coli with 18 variables. Now I can try to graph the data to see what that will give me. I likely will need to create 1 month averages of E coli in given areas to achieve this. Not applicable here, but in other datasets this would be promising.
+
+Step 8: Graphing Data
+```{r}
+Ecoli<-Ecolidata$`Escherichia coli`%>%recode("NA"="0")%>%as.numeric()%>%log10()
+
+
+
+
+
+
+ggplot(Ecolidata, x=Date)+
+  geom_count(aes(x=Date, y=Ecoli))+
+  labs(y="Ecoli Levels Log10 Scale (MFN/100mL)")+
+  geom_hline(yintercept=c(2.1,2.8), color=c("red", "blue"), alpha=0.25)
+```
+Update 1/26. Finally got the graph to work and produce something nice looking. Basic run down is I merged all the final cleaning code into a single line, and at the very end of this code I converted the Ecoli counts (MFN/100mL) into a log10 scale to be easier to read. For the graph I used geom_count instead of geom_point since this also better showed where the data was centralized. I also added two vertical lines at 2.1 (126 MFN/100mL) and 2.8 (630 MFN/100mL) representing the two seasonal water quality standards for drinking and recreational water in Georgia. Data was pulled from PDF, and is currently in bookmark in Spring Internship folder. Need to go through and condense the rest of the code, and make the graph better looking. Also could try and make
+
+
+
+
